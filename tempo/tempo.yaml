@@ -1,0 +1,30 @@
+# Minimal Tempo config for local demo (single binary, local storage).
+# - Receives OTLP traces (grpc+http)
+# - Stores traces on local volume
+# - Exposes /ready for healthcheck
+
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+        http:
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/traces
+
+# Optional: enables future trace-to-metrics / span-metrics workflows.
+metrics_generator:
+  storage:
+    path: /var/tempo/generator
+  processor:
+    span_metrics:
+      dimensions:
+        - service.name
+        - http.method
