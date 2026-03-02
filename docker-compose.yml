@@ -1,0 +1,64 @@
+# Local observability stack (Tempo-first):
+# - Tempo: tracing backend
+# - OTel Collector: OTLP receiver + exporter to Tempo (configured next commit)
+# - Prometheus: metrics store (scrape config next commit)
+# - Grafana: dashboards + trace exploration
+
+services:
+  tempo:
+    image: grafana/tempo:2.5.0
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP (query/ready)
+      - "4317:4317"   # OTLP gRPC (optional)
+      - "4318:4318"   # OTLP HTTP (optional)
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3200/ready"]
+      interval: 5s
+      timeout: 2s
+      retries: 30
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.103.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4318:4318"   # OTLP HTTP receiver (services send traces here)
+      - "4317:4317"   # OTLP gRPC receiver
+      - "8888:8888"   # collector internal metrics
+    depends_on:
+      tempo:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      # Enables modern Tempo query experience in Grafana Explore
+      GF_FEATURE_TOGGLES_ENABLE: "traceqlEditor"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - tempo
+
+volumes:
+  tempo-data:
