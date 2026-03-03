@@ -83,6 +83,7 @@ services:
       - loki
 
   hello-db:
+    profiles: ["demo"]
     image: postgres:16
     environment:
       POSTGRES_USER: postgres
@@ -95,18 +96,16 @@ services:
       retries: 20
 
   hello-api:
+    profiles: ["demo"]
     image: saas-ws-hello-api:latest
     environment:
       ADDR: ":8080"
       ENV: "dev"
       SERVICE_NAME: "saas-ws-hello"
-
       DB_DSN: "postgres://postgres:postgres@hello-db:5432/hello?sslmode=disable"
-
       JWT_HS256_SECRET: "dev-secret"
       JWT_ISSUER: "workspace"
       JWT_AUDIENCE: "workspace-services"
-
       OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector:4318"
       OTEL_EXPORTER_OTLP_INSECURE: "true"
     depends_on:
