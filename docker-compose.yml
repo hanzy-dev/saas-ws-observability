@@ -1,9 +1,3 @@
-# Local observability stack (Tempo-first):
-# - Tempo: tracing backend
-# - OTel Collector: OTLP receiver + exporter to Tempo (configured next commit)
-# - Prometheus: metrics store (scrape config next commit)
-# - Grafana: dashboards + trace exploration
-
 services:
   tempo:
     image: grafana/tempo:2.5.0
@@ -12,9 +6,7 @@ services:
       - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
       - tempo-data:/var/tempo
     ports:
-      - "3200:3200"   # Tempo HTTP (query/ready)
-      - "4317:4317"   # OTLP gRPC (optional)
-      - "4318:4318"   # OTLP HTTP (optional)
+      - "3200:3200"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3200/ready"]
       interval: 5s
@@ -27,9 +19,7 @@ services:
     volumes:
       - ./otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
     ports:
-      - "4318:4318"   # OTLP HTTP receiver (services send traces here)
-      - "4317:4317"   # OTLP gRPC receiver
-      - "8888:8888"   # collector internal metrics
+      - "8888:8888"
     depends_on:
       tempo:
         condition: service_healthy
