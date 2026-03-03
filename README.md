@@ -41,6 +41,15 @@ Generate demo traffic:
 make demo-traffic
 ```
 
+## One-command demo (repeatable)
+
+Run the full stack (with demo service) and generate traffic:
+
+```bash
+docker compose --profile demo up -d
+make demo-traffic
+```
+
 ## What you should see
 
 ### 1) Prometheus targets
@@ -74,7 +83,7 @@ Grafana → Explore → datasource Tempo:
 
 Grafana → Explore → datasource Loki:
 
-`
+`logql
 {compose_service="hello-api"} |= "http_request"
 `
 
