@@ -1,5 +1,17 @@
 .DS_Store
 .idea/
 .vscode/
+
 *.log
+*.tmp
+
 .env
+.env.*
+!.env.example
+
+# Grafana local state (if you ever mount writable dirs)
+grafana/data/
+grafana/plugins/
+
+# OS
+Thumbs.db
