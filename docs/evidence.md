@@ -1,11 +1,13 @@
 # Evidence Pack
 
-This repo provides repeatable proof that **metrics + tracing + alerts** work end-to-end for the Workspace ecosystem.
+This repo provides repeatable proof that **metrics + tracing + alerts + logs** work end-to-end for the Workspace ecosystem.
 
 ## URLs
 - Grafana: http://localhost:3000 (admin/admin)
 - Prometheus: http://localhost:9090
+- Alertmanager: http://localhost:9093
 - Tempo (backend): http://localhost:3200
+- Loki (backend): http://localhost:3100
 
 ## Evidence files (screenshots)
 Place screenshots under: `docs/evidence/`
@@ -15,9 +17,10 @@ Required:
 - `docs/evidence/dashboard-infra.png`
 - `docs/evidence/dashboard-hello-http-red.png`
 - `docs/evidence/trace-hello.png`
+- `docs/evidence/alerts.png`
 
 Optional (recommended):
-- `docs/evidence/alerts.png`
+- `docs/evidence/logs-loki.png`
 
 ---
 
@@ -39,10 +42,9 @@ Screenshot:
 Open Grafana → Dashboards → Folder `Workspace` → **Workspace Observability - Infra**
 
 Expected:
-- `Targets Up` shows `4`
+- `Targets Up` shows expected value (e.g. `4`)
 - `Collector Up` shows `1`
 - `Tempo Up` shows `1`
-- Scrape duration / samples charts are populated
 
 Screenshot:
 - `docs/evidence/dashboard-infra.png`
@@ -61,45 +63,60 @@ Expected:
 Screenshot:
 - `docs/evidence/dashboard-hello-http-red.png`
 
-Traffic generator (run from host, Docker network):
+Traffic generator:
 ```bash
-docker run --rm --network saas-ws-observability_default curlimages/curl:8.7.1 \
-  -sS http://hello-api:8080/ping >/dev/null
-
-docker run --rm --network saas-ws-observability_default curlimages/curl:8.7.1 \
-  -sS -X POST http://hello-api:8080/echo \
-  -H 'Content-Type: application/json' \
-  -d '{"message":"hi"}' >/dev/null
+make demo-traffic
 ```
 
-## 4) Tempo tracing proof (trace detail)
+4) Tempo tracing proof (trace detail)
 
 Open Grafana → Explore → datasource Tempo
 
 Search:
 
-- Service Name: saas-ws-hello
-- Span Name: GET /ping or POST /echo
+- Service Name: `saas-ws-hello`
+- Span Name: `GET /ping` or `POST /echo`
 
 Expected:
 
 - Traces are listed
 - Opening a trace shows span timeline / duration
-- Span names are stable (e.g. GET /ping, POST /echo)
+- Span names are stable (e.g. `GET /ping`, `POST /echo`)
 
 Screenshot:
 
 - `docs/evidence/trace-hello.png`
 
-5) Prometheus alerts loaded (inactive is OK)
+5) Prometheus alerts loaded
 
 Open: `http://localhost:9090/alerts`
 
 Expected:
 
-- Alert rules from prometheus/alerts.yml are loaded
-- State is typically Inactive when the system is healthy
+- Alert rules are loaded
+- State is typically `Inactive` when the system is healthy
 
 Screenshot:
 
 - `docs/evidence/alerts.png`
+
+6) Loki logs proof (optional)
+
+Open Grafana → Explore → datasource Loki
+
+Recommended query (focused):
+
+- `{compose_service="hello-api"} |= "http_request"`
+
+Alternative query (broad):
+
+- `{compose_project="saas-ws-observability"}`
+
+Expected:
+
+- Log lines appear for the selected service/project
+- JSON logs may include fields such as trace_id and request_id
+
+Screenshot:
+
+- `docs/evidence/logs-loki.png`
