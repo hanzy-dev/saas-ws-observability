@@ -1,0 +1,34 @@
+groups:
+  - name: infra
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "Prometheus target down (job={{ $labels.job }}, instance={{ $labels.instance }})"
+
+      - alert: OTelCollectorScrapeMissing
+        expr: up{job="otel-collector"} == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "OTel Collector scrape missing"
+
+      - alert: TempoScrapeMissing
+        expr: up{job="tempo"} == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "Tempo scrape missing"
+
+      - alert: HighPrometheusScrapeDuration
+        expr: scrape_duration_seconds{job=~"tempo|otel-collector"} > 1
+        for: 5m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "High scrape duration (job={{ $labels.job }})"
