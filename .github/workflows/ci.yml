@@ -1,0 +1,71 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install yamllint
+        run: |
+          python -m pip install --upgrade pip
+          pip install yamllint
+
+      - name: YAML lint
+        run: |
+          yamllint -d "{extends: default, rules: {line-length: {max: 140, level: warning}}}" .
+
+      - name: Validate docker compose
+        run: |
+          docker compose config >/dev/null
+
+      - name: Start stack
+        run: |
+          docker compose up -d
+          docker compose ps
+
+      - name: Smoke checks (health/ready)
+        run: |
+          set -euo pipefail
+
+          check() {
+            local name="$1"
+            local url="$2"
+            echo "Checking $name: $url"
+            for i in $(seq 1 30); do
+              if curl -fsS "$url" >/dev/null; then
+                echo "OK: $name"
+                return 0
+              fi
+              sleep 2
+            done
+            echo "FAILED: $name"
+            curl -v "$url" || true
+            return 1
+          }
+
+          check "Prometheus"    "http://localhost:9090/-/healthy"
+          check "Grafana"       "http://localhost:3000/api/health"
+          check "Tempo"         "http://localhost:3200/ready"
+          check "Loki"          "http://localhost:3100/ready"
+          check "Alertmanager"  "http://localhost:9093/-/ready"
+          check "OTel Collector metrics" "http://localhost:8888/metrics"
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          docker compose ps || true
+          docker compose logs --no-color --tail=200 || true
+
+      - name: Shutdown
+        if: always()
+        run: |
+          docker compose down -v
