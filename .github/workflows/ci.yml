@@ -21,7 +21,7 @@ jobs:
 
       - name: YAML lint
         run: |
-          yamllint -d "{extends: default, rules: {line-length: {max: 140, level: warning}}}" .
+          yamllint .
 
       - name: Validate docker compose
         run: |
